@@ -1,0 +1,94 @@
+<!DOCTYPE html><html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="description" content="把视频和音频变成可检索的时间戳文字稿。"><meta name="color-scheme" content="light dark"><meta name="theme-color" content="#e9ecf7"><title>bili-note · Eos101 / Working Set</title><meta name="astro-view-transitions-enabled" content="true"><meta name="astro-view-transitions-fallback" content="animate"><script type="module" src="/_astro/ClientRouter.astro_astro_type_script_index_0_lang.C0MNin66.js"></script><script>
+      (() => {
+        const WALLS = ["aurora", "dusk", "paper"];
+        const NIGHT_FROM = 20; // 20:00 起算夜间
+        const DAY_FROM = 6; // 06:00 起算白天
+
+        /* 「同一段」的判定：凌晨 0-6 点仍属于前一天入夜的那一段，
+           这样 23:00 手动切的主题不会在零点整莫名失效。 */
+        function periodOf(now) {
+          const hour = now.getHours();
+          const anchor = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+          if (hour < DAY_FROM) anchor.setDate(anchor.getDate() - 1);
+          const night = hour >= NIGHT_FROM || hour < DAY_FROM;
+          return {
+            key: `${anchor.getFullYear()}-${anchor.getMonth() + 1}-${anchor.getDate()}-${night ? "night" : "day"}`,
+            theme: night ? "dark" : "light",
+          };
+        }
+
+        /* 手动选择只在「做出选择的那一段」内有效；跨过 20:00 / 06:00
+           自动让位给时间规则，不必手动切回来。 */
+        function readOverride(periodKey) {
+          try {
+            if (localStorage.getItem("cq-theme-period") !== periodKey) return null;
+            const saved = localStorage.getItem("cq-theme");
+            return saved === "dark" || saved === "light" ? saved : null;
+          } catch {
+            return null;
+          }
+        }
+
+        function readWall() {
+          try {
+            const saved = localStorage.getItem("cq-wall");
+            return WALLS.indexOf(saved) >= 0 ? saved : "aurora";
+          } catch {
+            return "aurora";
+          }
+        }
+
+        function paint(theme, wall) {
+          const root = document.documentElement;
+          root.dataset.theme = theme;
+          root.dataset.wall = wall;
+          const meta = document.querySelector('meta[name="theme-color"]');
+          if (meta) meta.content = theme === "dark" ? "#070a14" : "#e9ecf7";
+        }
+
+        function resolve() {
+          const period = periodOf(new Date());
+          return {
+            theme: readOverride(period.key) ?? period.theme,
+            wall: readWall(),
+            period,
+          };
+        }
+
+        window.__cqTheme = { periodOf, resolve, paint };
+
+        const first = resolve();
+        paint(first.theme, first.wall);
+
+        /* 换页时 Astro 先清掉 <html> 上所有非 Astro 属性，再套用新文档的属性；
+           而新文档是 fetch 来的，内联脚本不会执行 —— 不在这里盖章，
+           data-theme / data-wall 每次换页都会丢，主题被打回默认。 */
+        document.addEventListener("astro:before-swap", (event) => {
+          const next = resolve();
+          const html = event.newDocument.documentElement;
+          html.dataset.theme = next.theme;
+          html.dataset.wall = next.wall;
+        });
+
+        /* 页面一直开着跨过 20:00 / 06:00 时自动切换 */
+        window.setInterval(() => {
+          const next = resolve();
+          if (document.documentElement.dataset.theme !== next.theme) paint(next.theme, next.wall);
+        }, 60000);
+      })();
+    </script><link rel="stylesheet" href="/_astro/BaseLayout.DMgd0VtN.css"><script type="module" src="/_astro/page.DJ1T1J6G.js"></script></head><body><a class="skip-link" href="#main-content">跳到正文</a><div class="wallpaper" aria-hidden="true"><span class="wallpaper-blob is-1"></span><span class="wallpaper-blob is-2"></span><span class="wallpaper-blob is-3"></span><span class="wallpaper-blob is-4"></span></div><div id="cq-progress" aria-hidden="true"></div><header class="site-header"><div class="shell-wide"><div class="dock glass"><a class="brand" href="/" aria-label="Eos101 Working Set 首页"><span class="brand-mark" aria-hidden="true">Eos101</span><span class="brand-copy"><strong>Working Set</strong><small>v3 · studio</small></span></a><nav class="site-nav" aria-label="主导航"><span class="nav-thumb" aria-hidden="true"></span><a href="/">Index</a><a href="/notes/">Notes</a><a href="/works/" aria-current="page">Works</a><a href="/gallery/">Gallery</a><a href="/about/">About</a></nav><div class="dock-actions"><button class="icon-button wall-toggle" type="button" aria-label="切换壁纸" title="切换壁纸"><svg xmlns="http://www.w3.org/2000/svg" stroke-width="1.7" width="17" height="17" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" fill="none" viewBox="0 0 24 24" aria-hidden="true" class="lucide lucide-palette"><path d="M12 22a1 1 0 0 1 0-20 10 9 0 0 1 10 9 5 5 0 0 1-5 5h-2.25a1.75 1.75 0 0 0-1.4 2.8l.3.4a1.75 1.75 0 0 1-1.4 2.8z"></path><circle cx="13.5" cy="6.5" r=".5" fill="currentColor"></circle><circle cx="17.5" cy="10.5" r=".5" fill="currentColor"></circle><circle cx="6.5" cy="12.5" r=".5" fill="currentColor"></circle><circle cx="8.5" cy="7.5" r=".5" fill="currentColor"></circle></svg></button><button class="icon-button theme-toggle" type="button" aria-label="切换深浅主题" title="切换主题"><svg xmlns="http://www.w3.org/2000/svg" stroke-width="1.7" width="17" height="17" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" fill="none" viewBox="0 0 24 24" aria-hidden="true" class="lucide lucide-sun theme-light-icon"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2"></path><path d="M12 20v2"></path><path d="m4.93 4.93 1.41 1.41"></path><path d="m17.66 17.66 1.41 1.41"></path><path d="M2 12h2"></path><path d="M20 12h2"></path><path d="m6.34 17.66-1.41 1.41"></path><path d="m19.07 4.93-1.41 1.41"></path></svg><svg xmlns="http://www.w3.org/2000/svg" stroke-width="1.7" width="17" height="17" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" fill="none" viewBox="0 0 24 24" aria-hidden="true" class="lucide lucide-moon theme-dark-icon"><path d="M20.985 12.486a9 9 0 1 1-9.473-9.472c.405-.022.617.46.402.803a6 6 0 0 0 8.268 8.268c.344-.215.825-.004.803.401"></path></svg></button></div></div></div></header><script type="module">function e(e){let t=document.querySelector(`.site-nav`),n=t?.querySelector(`.nav-thumb`);if(!t||!n)return;let r=t.querySelector(`a[aria-current="page"]`)??t.querySelector(`a`);if(!r)return;let i=t.getBoundingClientRect(),a=r.getBoundingClientRect();a.width&&(e||(n.style.transition=`none`),n.style.width=`${a.width}px`,n.style.transform=`translateX(${a.left-i.left-4}px)`,n.classList.add(`is-ready`),e||(n.offsetWidth,n.style.transition=``))}e(!1),document.fonts?.ready.then(()=>e(!1)),window.addEventListener(`resize`,()=>e(!1),{passive:!0}),document.addEventListener(`astro:page-load`,()=>e(!1));</script><main id="main-content" class="page-enter"><article class="article-shell"><a class="back-link" href="/works/"><svg xmlns="http://www.w3.org/2000/svg" stroke-width="2" width="15" height="15" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" fill="none" viewBox="0 0 24 24" aria-hidden="true" class="lucide lucide-arrow-left"><path d="m12 19-7-7 7-7"></path><path d="M19 12H5"></path></svg> Works</a><div class="article-card glass" data-reveal><header class="article-header"><div class="note-tags"><span class="status-chip is-active">Active</span><span>#AI</span><span>#Whisper</span><span>#Local-first</span></div><h1>bili-note</h1><p>把视频和音频变成可检索的时间戳文字稿。</p><div class="article-meta"><span class="mono">2026 · v2.1</span><span>更新 2026/10/11</span></div></header><div class="prose"><h2 id="这是什么">这是什么</h2>
+<p>一个跑在本机的 Web 应用：把一个视频链接（或本地文件）丢进去，它把视频和音频变成<strong>带时间戳的文字稿</strong>，再把文字稿变成能读、能搜、能总结的稿子。</p>
+<p>技术上没什么花活：FastAPI + uvicorn 做后端，<code>yt-dlp</code> 负责下载，<code>faster-whisper</code> 转写（<code>large-v3</code> / <code>large-v3-turbo</code> 两个模型随时切），前端是原生 HTML/CSS/JS，零构建。</p>
+<h2 id="它解决的是我自己的问题">它解决的是我自己的问题</h2>
+<p>我在 B 站和油管上看的东西，价值和长度成正比——一小时的讲座、四十多分钟的课，看的时候记得住，过两周就只剩一个印象。</p>
+<p>所以我要的不是”字幕文件”，是<strong>一份能跳回去的文字稿</strong>：点某一句话的时间戳，视频就跳到那一段。</p>
+<h2 id="我自己做进去的几件事">我自己做进去的几件事</h2>
+<ul>
+<li><strong>总结在后台跑。</strong> 一开始”总结”和”那根连接”是同一个东西：关掉弹窗，连接断掉，总结当场停掉；而且同时只能总结一个。现在总结是一个独立的<strong>后台作业</strong>，关掉弹窗只等于关掉一个观看窗口——首页每张任务卡各显示各的进度，同时跑几个也没问题。回放是关键：新接上来的窗口会先把已经发生过的事件补一遍。</li>
+<li><strong>万字稿：切输出，不切输入。</strong> 一趟生成上万字，模型会前紧后松（实测后半段字数只有前半段的 0.93 倍），还会<strong>凭空造引用</strong>。改成”先出骨架、再逐节展开”之后，引号保真从 55% 回到 100%，末尾不再变薄，而且比原来更快（80 秒 → 52 秒）。</li>
+<li><strong>点时间戳跳回视频。</strong> 本地视频靠 HTTP <code>Range</code> 请求拖动，B 站链接直接开原页面并带上秒数。</li>
+<li><strong>两种输入。</strong> 链接下载，或者<strong>直接粘一个本地文件路径</strong>跳过转写——对已有的十几份文稿做总结，不用重跑一遍。</li>
+<li><strong>推理模型的思考过程单独接出来显示。</strong> 不接的话，首字延迟 45 秒，界面空白得像卡死了；接上之后 1.8 秒就有东西动。</li>
+</ul>
+<h2 id="现在的状态">现在的状态</h2>
+<p>日常在用。不联网、只花api。它现在是我看长视频的入口。</p></div></div></article></main><footer class="site-footer"><div class="shell"><div class="footer-inner glass"><span><strong>Eos010 / Working Set</strong> · Builds, notes, and a self in progress.</span><nav class="footer-links" aria-label="页脚导航"><a href="/notes/">Notes</a><a href="/works/">Works</a><a href="/gallery/">Gallery</a><a href="/about/">About</a><span class="mono">© 2026</span></nav></div></div></footer><aside data-astro-transition-persist="cq-music-player" class="music-dock glass" id="music-dock" aria-label="音乐播放器" data-tracks="[{&quot;id&quot;:&quot;auburn-h-mu9ts96x&quot;,&quot;title&quot;:&quot;我与你&quot;,&quot;artist&quot;:&quot;鸣潮先约电台&quot;,&quot;src&quot;:&quot;assets/music/auburn-h-mu9ts96t-705706.ogg&quot;,&quot;published&quot;:true,&quot;order&quot;:1}]" data-base><div class="track-copy"><span class="eq" aria-hidden="true"><i></i><i></i><i></i><i></i></span><span class="track-text"><strong id="track-title">我与你</strong><small id="track-artist">鸣潮先约电台</small></span></div><div class="player-controls"><button class="player-icon" id="track-prev" type="button" aria-label="上一首" title="上一首"><svg xmlns="http://www.w3.org/2000/svg" stroke-width="2" width="15" height="15" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true" class="lucide lucide-skip-back"><path d="M17.971 4.285A2 2 0 0 1 21 6v12a2 2 0 0 1-3.029 1.715l-9.997-5.998a2 2 0 0 1-.003-3.432z"></path><path d="M3 20V4"></path></svg></button><button class="player-toggle" id="track-toggle" type="button" aria-label="播放" title="播放"><svg xmlns="http://www.w3.org/2000/svg" stroke-width="2" width="17" height="17" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true" class="lucide lucide-play play-icon"><path d="M5 5a2 2 0 0 1 3.008-1.728l11.997 6.998a2 2 0 0 1 .003 3.458l-12 7A2 2 0 0 1 5 19z"></path></svg><svg xmlns="http://www.w3.org/2000/svg" stroke-width="2" width="17" height="17" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true" class="lucide lucide-pause pause-icon"><rect x="14" y="3" width="5" height="18" rx="1"></rect><rect x="5" y="3" width="5" height="18" rx="1"></rect></svg></button><button class="player-icon" id="track-next" type="button" aria-label="下一首" title="下一首"><svg xmlns="http://www.w3.org/2000/svg" stroke-width="2" width="15" height="15" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true" class="lucide lucide-skip-forward"><path d="M21 4v16"></path><path d="M6.029 4.285A2 2 0 0 0 3 6v12a2 2 0 0 0 3.029 1.715l9.997-5.998a2 2 0 0 0 .003-3.432z"></path></svg></button></div><button class="icon-button" id="player-expand" type="button" aria-expanded="false" aria-controls="player-extras" aria-label="展开播放器详情" title="展开播放器"><svg xmlns="http://www.w3.org/2000/svg" stroke-width="1.7" width="17" height="17" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" fill="none" viewBox="0 0 24 24" aria-hidden="true" class="lucide lucide-chevron-down"><path d="m6 9 6 6 6-6"></path></svg></button><div class="player-extras" id="player-extras"><label class="progress-wrap" id="progress-wrap" aria-label="播放进度"><span id="track-time" class="mono">0:00</span><input id="track-progress" type="range" min="0" max="100" value="0" step="0.1"></label><label class="volume-wrap" aria-label="音量"><svg xmlns="http://www.w3.org/2000/svg" stroke-width="1.7" width="15" height="15" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" fill="none" viewBox="0 0 24 24" aria-hidden="true" class="lucide lucide-volume-2"><path d="M11 4.702a.705.705 0 0 0-1.203-.498L6.413 7.587A1.4 1.4 0 0 1 5.416 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.416a1.4 1.4 0 0 1 .997.413l3.383 3.384A.705.705 0 0 0 11 19.298z"></path><path d="M16 9a5 5 0 0 1 0 6"></path><path d="M19.364 18.364a9 9 0 0 0 0-12.728"></path></svg><input id="track-volume" type="range" min="0" max="1" value="0.72" step="0.01"></label><div class="track-picker" id="track-picker"><button class="track-picker-button" id="track-picker-button" type="button" role="combobox" aria-haspopup="listbox" aria-expanded="false" aria-controls="track-picker-list" aria-label="选择曲目"><svg xmlns="http://www.w3.org/2000/svg" stroke-width="1.7" width="14" height="14" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" fill="none" viewBox="0 0 24 24" aria-hidden="true" class="lucide lucide-list-music"><path d="M16 5H3"></path><path d="M11 12H3"></path><path d="M11 19H3"></path><path d="M21 16V5"></path><circle cx="18" cy="16" r="3"></circle></svg><span class="track-picker-label" id="track-picker-label">我与你 · 鸣潮先约电台</span><svg xmlns="http://www.w3.org/2000/svg" stroke-width="1.7" width="15" height="15" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" fill="none" viewBox="0 0 24 24" aria-hidden="true" class="lucide lucide-chevron-down track-picker-caret"><path d="m6 9 6 6 6-6"></path></svg></button><ul class="track-picker-list glass is-solid" id="track-picker-list" role="listbox" aria-label="曲目列表"><li class="track-picker-option" role="option" id="track-option-0" data-index="0" aria-selected="true"><span class="opt-title">我与你</span><span class="opt-artist">鸣潮先约电台</span><svg xmlns="http://www.w3.org/2000/svg" stroke-width="2.2" width="13" height="13" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" fill="none" viewBox="0 0 24 24" aria-hidden="true" class="lucide lucide-check opt-check"><path d="M20 6 9 17l-5-5"></path></svg></li></ul></div></div><audio id="cq-audio" preload="metadata"></audio></aside><script type="module" src="/_astro/MusicPlayer.astro_astro_type_script_index_0_lang.ASRaPUeR.js"></script><script type="module" src="/_astro/BaseLayout.astro_astro_type_script_index_0_lang.B76VSww4.js"></script></body></html>
